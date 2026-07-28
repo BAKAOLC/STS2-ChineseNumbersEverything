@@ -48,6 +48,7 @@ namespace STS2ChineseNumbersEverything
             patcher.RegisterPatch<LocalizedFormattedTextPatch>();
             patcher.RegisterPatch<MegaTextAutoSizePatch>();
             patcher.RegisterPatch<MegaTextReadyPatch>();
+            patcher.RegisterPatch<IconBadgeTextPatch>();
             patcher.RegisterPatch<GodotTextSetterPatch>();
             patcher.RegisterPatch<GodotPlaceholderSetterPatch>();
             patcher.RegisterPatch<CanvasItemDrawStringPatch>();
