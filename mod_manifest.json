@@ -1,0 +1,18 @@
+{
+  "id": "STS2-ChineseNumbersEverything",
+  "pck_name": "STS2-ChineseNumbersEverything",
+  "name": "Chinese Numbers Everything",
+  "author": "OLC",
+  "description": "Automatically converts numbers in displayed Chinese text to Chinese numerals.",
+  "version": "0.1.0",
+  "has_pck": false,
+  "has_dll": true,
+  "affects_gameplay": false,
+  "min_game_version": "0.107.1",
+  "dependencies": [
+    {
+      "id": "STS2-RitsuLib",
+      "min_version": "0.4.38"
+    }
+  ]
+}
