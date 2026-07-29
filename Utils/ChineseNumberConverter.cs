@@ -4,36 +4,68 @@ namespace STS2ChineseNumbersEverything.Utils
 {
     internal static class ChineseNumberConverter
     {
-        private static readonly string[] Digits = ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九"];
-        private static readonly string[] SmallUnits = ["", "十", "百", "千"];
-        private static readonly string[] LargeUnits = ["", "万", "亿", "兆"];
+        private static readonly NumeralSymbols StandardSymbols = new(
+            ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九"],
+            ["", "十", "百", "千"],
+            ["", "万", "亿", "兆"],
+            '点',
+            '负',
+            true);
 
-        public static string Convert(string integerDigits, string? fractionalDigits = null, bool isNegative = false)
+        private static readonly NumeralSymbols FinancialSymbols = new(
+            ["零", "壹", "贰", "叁", "肆", "伍", "陆", "柒", "捌", "玖"],
+            ["", "拾", "佰", "仟"],
+            ["", "万", "亿", "兆"],
+            '点',
+            '负',
+            false);
+
+        public static string Convert(
+            string integerDigits,
+            string? fractionalDigits = null,
+            bool isNegative = false)
+        {
+            return Convert(integerDigits, fractionalDigits, isNegative, StandardSymbols);
+        }
+
+        public static string ConvertFinancial(
+            string integerDigits,
+            string? fractionalDigits = null,
+            bool isNegative = false)
+        {
+            return Convert(integerDigits, fractionalDigits, isNegative, FinancialSymbols);
+        }
+
+        private static string Convert(
+            string integerDigits,
+            string? fractionalDigits,
+            bool isNegative,
+            NumeralSymbols symbols)
         {
             ArgumentException.ThrowIfNullOrEmpty(integerDigits);
 
             var builder = new StringBuilder();
             if (isNegative && !IsZero(integerDigits, fractionalDigits))
             {
-                builder.Append('负');
+                builder.Append(symbols.NegativeSign);
             }
 
-            builder.Append(ConvertInteger(integerDigits));
+            builder.Append(ConvertInteger(integerDigits, symbols));
 
             if (!string.IsNullOrEmpty(fractionalDigits))
             {
-                builder.Append('点');
-                AppendDigitsIndividually(builder, fractionalDigits);
+                builder.Append(symbols.DecimalPoint);
+                AppendDigitsIndividually(builder, fractionalDigits, symbols);
             }
 
             return builder.ToString();
         }
 
-        private static string ConvertInteger(string digits)
+        private static string ConvertInteger(string digits, NumeralSymbols symbols)
         {
             if (digits.Length > 1 && digits[0] == '0')
             {
-                return ConvertDigitsIndividually(digits);
+                return ConvertDigitsIndividually(digits, symbols);
             }
 
             var firstNonZeroIndex = 0;
@@ -43,9 +75,9 @@ namespace STS2ChineseNumbersEverything.Utils
             }
 
             digits = digits[firstNonZeroIndex..];
-            if (digits.Length > LargeUnits.Length * 4)
+            if (digits.Length > symbols.LargeUnits.Length * 4)
             {
-                return ConvertDigitsIndividually(digits);
+                return ConvertDigitsIndividually(digits, symbols);
             }
 
             var groupCount = (digits.Length + 3) / 4;
@@ -73,21 +105,22 @@ namespace STS2ChineseNumbersEverything.Utils
 
                 if (builder.Length > 0 && (pendingZero || groupValue < 1000))
                 {
-                    AppendZero(builder);
+                    AppendZero(builder, symbols);
                 }
 
-                AppendFourDigitGroup(builder, groupDigits, builder.Length == 0);
-                builder.Append(LargeUnits[groupPosition]);
+                AppendFourDigitGroup(builder, groupDigits, builder.Length == 0, symbols);
+                builder.Append(symbols.LargeUnits[groupPosition]);
                 pendingZero = false;
             }
 
-            return builder.Length == 0 ? Digits[0] : builder.ToString();
+            return builder.Length == 0 ? symbols.Digits[0] : builder.ToString();
         }
 
         private static void AppendFourDigitGroup(
             StringBuilder builder,
             ReadOnlySpan<char> groupDigits,
-            bool omitLeadingOne)
+            bool isFirstGroup,
+            NumeralSymbols symbols)
         {
             var pendingZero = false;
 
@@ -108,26 +141,28 @@ namespace STS2ChineseNumbersEverything.Utils
 
                 if (pendingZero)
                 {
-                    AppendZero(builder);
+                    AppendZero(builder, symbols);
                     pendingZero = false;
                 }
 
-                var omitOne = digit == 1 &&
+                var omitOne = symbols.OmitLeadingOneInTens &&
+                              digit == 1 &&
                               unitPosition == 1 &&
-                              omitLeadingOne &&
-                              IsStartOfCurrentNumber(builder);
+                              isFirstGroup &&
+                              IsStartOfCurrentNumber(builder, symbols);
                 if (!omitOne)
                 {
-                    builder.Append(Digits[digit]);
+                    builder.Append(symbols.Digits[digit]);
                 }
 
-                builder.Append(SmallUnits[unitPosition]);
+                builder.Append(symbols.SmallUnits[unitPosition]);
             }
         }
 
-        private static bool IsStartOfCurrentNumber(StringBuilder builder)
+        private static bool IsStartOfCurrentNumber(StringBuilder builder, NumeralSymbols symbols)
         {
-            return builder.Length == 0 || (builder.Length == 1 && builder[0] == '负');
+            return builder.Length == 0 ||
+                   (builder.Length == 1 && builder[0] == symbols.NegativeSign);
         }
 
         private static int ParseDigits(ReadOnlySpan<char> digits)
@@ -141,26 +176,29 @@ namespace STS2ChineseNumbersEverything.Utils
             return value;
         }
 
-        private static string ConvertDigitsIndividually(string digits)
+        private static string ConvertDigitsIndividually(string digits, NumeralSymbols symbols)
         {
             var builder = new StringBuilder(digits.Length);
-            AppendDigitsIndividually(builder, digits);
+            AppendDigitsIndividually(builder, digits, symbols);
             return builder.ToString();
         }
 
-        private static void AppendDigitsIndividually(StringBuilder builder, string digits)
+        private static void AppendDigitsIndividually(
+            StringBuilder builder,
+            string digits,
+            NumeralSymbols symbols)
         {
             foreach (var digit in digits)
             {
-                builder.Append(Digits[digit - '0']);
+                builder.Append(symbols.Digits[digit - '0']);
             }
         }
 
-        private static void AppendZero(StringBuilder builder)
+        private static void AppendZero(StringBuilder builder, NumeralSymbols symbols)
         {
-            if (builder.Length == 0 || builder[^1] != '零')
+            if (builder.Length == 0 || builder[^1] != symbols.Digits[0][0])
             {
-                builder.Append('零');
+                builder.Append(symbols.Digits[0]);
             }
         }
 
@@ -170,5 +208,13 @@ namespace STS2ChineseNumbersEverything.Utils
                    (string.IsNullOrEmpty(fractionalDigits) ||
                     fractionalDigits.All(static digit => digit == '0'));
         }
+
+        private sealed record NumeralSymbols(
+            string[] Digits,
+            string[] SmallUnits,
+            string[] LargeUnits,
+            char DecimalPoint,
+            char NegativeSign,
+            bool OmitLeadingOneInTens);
     }
 }

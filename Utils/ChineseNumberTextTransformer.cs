@@ -7,21 +7,25 @@ namespace STS2ChineseNumbersEverything.Utils
 {
     internal static class ChineseNumberTextTransformer
     {
-        private static readonly ConcurrentDictionary<NumberToken, string> NumberCache = [];
+        private static readonly ConcurrentDictionary<ConversionCacheKey, string> NumberCache = [];
 
         public static string Transform(string text)
         {
-            if (string.IsNullOrEmpty(text) ||
-                !ChineseNumberSettingsService.Enabled ||
-                !IsChineseLocale())
+            if (string.IsNullOrEmpty(text) || !ChineseNumberSettingsService.Enabled)
             {
                 return text;
             }
 
-            return ConvertVisibleNumbers(text);
+            var style = ChineseNumberSettingsService.Style;
+            if (!IsChineseLocale())
+            {
+                return text;
+            }
+
+            return ConvertVisibleNumbers(text, style);
         }
 
-        internal static string ConvertVisibleNumbers(string text)
+        internal static string ConvertVisibleNumbers(string text, NumberDisplayStyle style)
         {
             StringBuilder? builder = null;
             var copyStart = 0;
@@ -47,8 +51,8 @@ namespace STS2ChineseNumbersEverything.Utils
                 }
 
                 var converted = NumberCache.GetOrAdd(
-                    token,
-                    ConvertNumberToken);
+                    new ConversionCacheKey(token, style),
+                    static key => ConvertNumberToken(key.Token, key.Style));
 
                 builder ??= new StringBuilder(text.Length + converted.Length);
                 builder.Append(text, copyStart, index - copyStart);
@@ -140,19 +144,24 @@ namespace STS2ChineseNumbersEverything.Utils
             return true;
         }
 
-        private static string ConvertNumberToken(NumberToken token)
+        private static string ConvertNumberToken(NumberToken token, NumberDisplayStyle style)
         {
+            Func<string, string?, bool, string> convert = style == NumberDisplayStyle.ChineseFinancial
+                ? ChineseNumberConverter.ConvertFinancial
+                : ChineseNumberConverter.Convert;
+
             if (!token.IsPercent)
             {
-                return ChineseNumberConverter.Convert(
+                return convert(
                     token.IntegerDigits,
                     token.FractionalDigits,
                     token.IsNegative);
             }
 
-            var magnitude = ChineseNumberConverter.Convert(
+            var magnitude = convert(
                 token.IntegerDigits,
-                token.FractionalDigits);
+                token.FractionalDigits,
+                false);
             return token.IsNegative
                 ? $"负百分之{magnitude}"
                 : $"百分之{magnitude}";
@@ -318,5 +327,9 @@ namespace STS2ChineseNumbersEverything.Utils
             string? FractionalDigits,
             bool IsNegative,
             bool IsPercent);
+
+        private readonly record struct ConversionCacheKey(
+            NumberToken Token,
+            NumberDisplayStyle Style);
     }
 }
