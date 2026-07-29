@@ -4,7 +4,7 @@
   "name": "Chinese Numbers Everything",
   "author": "OLC",
   "description": "Automatically converts displayed numbers to configurable standard or uppercase financial Chinese numerals.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "has_pck": false,
   "has_dll": true,
   "affects_gameplay": false,

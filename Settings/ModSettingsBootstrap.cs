@@ -1,5 +1,6 @@
 using MegaCrit.Sts2.Core.Localization;
 using STS2ChineseNumbersEverything.Data;
+using STS2ChineseNumbersEverything.Utils;
 using STS2RitsuLib;
 using STS2RitsuLib.Settings;
 
@@ -24,7 +25,10 @@ namespace STS2ChineseNumbersEverything.Settings
                         Const.ModId,
                         ModDataStore.SettingsKey,
                         settings => settings.Enabled,
-                        (settings, value) => settings.Enabled = value),
+                        (settings, value) => DisplayTextRefreshService.SetValue(
+                            settings.Enabled,
+                            value,
+                            newValue => settings.Enabled = newValue)),
                     () => true);
 
                 var styleBinding = ModSettingsBindings.WithDefault(
@@ -32,7 +36,10 @@ namespace STS2ChineseNumbersEverything.Settings
                         Const.ModId,
                         ModDataStore.SettingsKey,
                         settings => settings.Style,
-                        (settings, value) => settings.Style = value),
+                        (settings, value) => DisplayTextRefreshService.SetValue(
+                            settings.Style,
+                            value,
+                            newValue => settings.Style = newValue)),
                     () => NumberDisplayStyle.Chinese);
 
                 RitsuLibFramework.RegisterModSettings(Const.ModId, page => page
@@ -48,8 +55,8 @@ namespace STS2ChineseNumbersEverything.Settings
                             T("Enable number conversion", "启用数字转换"),
                             enabledBinding,
                             T(
-                                "When disabled, newly displayed numbers remain unchanged.",
-                                "关闭后，新显示的数字将保持原样。"))
+                                "When disabled, displayed numbers remain unchanged.",
+                                "关闭后，显示的数字将保持原样。"))
                         .AddEnumChoice(
                             "style",
                             T("Number style", "数字样式"),
